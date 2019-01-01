@@ -6,7 +6,7 @@ const {ObjectId} = require('mongodb');
 var {mongoose} = require('../db/mongoose');
 var {Todo} = require('../models/Todo');
 var {User} = require('../models/User');
-
+var {authanticate} = require('../server/middleware/authanticate');
 
 
 var app = express();
@@ -114,6 +114,39 @@ app.patch('/todos/:id',(req,res) => {
 });
 
 
+
+/** Create new user */
+
+app.post('/users',(req,res) => {
+	var body = _.pick(req.body,['email','password']);
+	var user = new User(body);
+	user.save().then(() => {
+		return user.generateAuthToken();
+		//res.send(user);
+	}).then((token) => {
+		res.header('x-auth',token).send(user);
+	}).catch((e) => {
+		res.status(400).send(e);
+	});      
+});
+
+
+app.post('/users/login', (req,res) => {
+	var body = _.pick(req.body,['email','password']);
+	User.findByCredentails(body.email,body.password).then((user) => {
+		return user.generateAuthToken().then((token) => {
+			res.header('x-auth',token).send(user);
+		});
+		// res.send(user);
+	}).catch((e) => {
+		res.status(400).send();
+	});
+});
+
+
+app.get('/users/me', authanticate, (req,res) => {
+	res.send(req.user);
+});
 
 
 app.listen(port,() => {
